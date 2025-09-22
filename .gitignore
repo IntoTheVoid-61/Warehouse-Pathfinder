@@ -89,5 +89,5 @@ Thumbs.db
 .idea/
 
 # --- Project-specific ---
-system_test/
+system_tests/
 system_tests.py

@@ -41,6 +41,6 @@ Future updates will include ROS2 packages that consume these layouts for autonom
 
 ## Author
 
-Ziga Breznikar
-mail: ziga.breznikar@student.um.si
+- Ziga Breznikar
+- Mail: ziga.breznikar@student.um.si
 

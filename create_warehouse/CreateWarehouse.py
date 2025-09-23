@@ -41,6 +41,8 @@ finding an optimal path for the AGV to take, to collect all the items.
 
 For information about how to use the class, please consult the example.py
 
+!! Future work will extend to implementing a class used to change pickup locations on an already created warehouse. !!
+
 Author: Ziga Breznikar
 Mail: ziga.breznikar@student.um.si
 Date: 22.09.2025

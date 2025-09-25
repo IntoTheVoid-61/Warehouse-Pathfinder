@@ -5,14 +5,13 @@ from tkinter import messagebox
 import pygame
 
 """
-This class is used to easily create any warehouse configuration with given parameters:
+This class is used to easily create any warehouse configuration with given parameters * :
     - Number of blocks
     - Number of aisles
     - Number of locations per aisle
     
-When a desired warehouse configuration is created the user can specify which storage blocks are full
-(required for picking) by an Autonomous Robot (AGV).
-You can select the desired storage block by clicking on it.
+For information about how to use the class, please consult the example_create_warehouse.py  
+    
 
 Blocks are colour coded with the following encoding rules:
 
@@ -33,15 +32,11 @@ The subfolder will contain a numerically encoded warehouse following the encodin
                 -3: Pick-up location / Traversable
                 -9: Start and end position / Traversable
                 
-And a JPG image of the created warehouse for easier visualization.
 
 
-CreateWarehouse class is used as a segment, to easily create a warehouse with pickup locations, which will be used in
-finding an optimal path for the AGV to take, to collect all the items.
 
-For information about how to use the class, please consult the example.py
+This version still includes create_warehouse method which is not recommended it was used solely for quick testing purposes.
 
-!! Future work will extend to implementing a class used to change pickup locations on an already created warehouse. !!
 
 Author: Ziga Breznikar
 Mail: ziga.breznikar@student.um.si
@@ -71,8 +66,9 @@ class CreateWarehouse:
     """
 
 
-    def __init__(self,parent_directory,save_to_text=False):
+    def __init__(self,parent_directory,warehouse_name,save_to_text=False):
         self.parent_directory = parent_directory
+        self.warehouse_name = warehouse_name
         self.save_to_text = save_to_text
 
 
@@ -240,7 +236,7 @@ class CreateWarehouse:
                         print("Cannot put pick up place at the left!")
                         pass
                 else:
-                    print("Invalid location, try a different one")
+                    pass
             except Exception as e:
                 print(f"Invalid input format, consult documentation. Error: {e}")
 
@@ -381,6 +377,188 @@ class CreateWarehouse:
         pygame.quit()
         return None
 
+    def draw_empty_warehouse(self,warehouse_array,root=None):
+        """
+        Method is used to draw the empty warehouse, so the user can visually confirm it is correct.
+        Each block has two different forms of encoding:
+            Colour encoding:
+
+
+            Numerical encoding:
+
+        ----------
+        Parameters:
+        ----------
+
+        self: CreateWarehouse
+            Instance of class used to create and save the warehouses.
+
+        warehouse_array: np.ndarray
+            Warehouse array in an encoded format, created with create_warehouse_array method.
+
+        -------
+        Returns: None
+        -------
+        """
+
+        warehouse = warehouse_array.copy()
+        pygame.init()
+
+        max_width = 1200
+        max_height = 790
+        rows, cols = warehouse_array.shape
+        CELL_SIZE = min(max_width // cols, max_height // rows)
+        width = warehouse_array.shape[1] * CELL_SIZE
+        height = warehouse_array.shape[0] * CELL_SIZE
+        screen = pygame.display.set_mode((width, height))
+        pygame.display.set_caption("Empty Warehouse Layout")
+
+        # Path for the saving of empty warehouse
+        helper = f"{self.warehouse_name}_empty"
+        full_path = os.path.join(self.parent_directory, self.warehouse_name,helper)
+        scenario_path = os.path.join(self.parent_directory, self.warehouse_name,"scenarios")
+
+
+        # Colors
+        WHITE = (255, 255, 255)  # Empty space and paths
+        BLACK = (0, 0, 0)  # Storage locations (1)
+        GREEN = (0, 255, 0)  # Start/End location (9)
+
+        running = True
+
+        while running:
+            for event in pygame.event.get(): # For quiting
+                if event.type == pygame.QUIT:
+                    running = False
+                elif event.type == pygame.KEYDOWN:  # If user clicks space bar it closes or closes and saves
+                    if event.key == pygame.K_SPACE:
+                        if self.save_to_text:
+
+                            try: # Try to create directory for empty warehouse and scenario directory
+                                os.makedirs(full_path, exist_ok=False)
+                                os.makedirs(scenario_path, exist_ok=False)
+                                print(f"Directory '{full_path}' created successfully")
+                            except Exception as e:
+                                print(f"Failed to create directory '{full_path}' Error: {e}")
+
+                            try: # Tries to save warehouse in array format
+                                warehouse = np.where(np.isinf(warehouse), -1, warehouse).astype(int)
+                                np.savetxt(
+                                    os.path.join(full_path,self.warehouse_name+"_empty.txt"),
+                                    warehouse, fmt="%d", delimiter=" ")
+                                print("Successfully saved warehouse in array format.")
+                            except Exception as e:
+                                print(f"Could not save warehouse. Error: {e}")
+
+
+                            try: # Try to save png image of created warehouse
+                                screen_shot_path = os.path.join(full_path, f"{self.warehouse_name}_empty.png")
+                                pygame.image.save(screen, screen_shot_path)
+                                print(f"Successfully saved empty warehouse in png format")
+                            except Exception as e:
+                                print(f"Could not save screenshot. Error: {e}")
+                        running = False
+
+                        if root is not None:
+                            root.destroy()
+
+
+
+            screen.fill(WHITE)  # Default background
+            for y in range(warehouse_array.shape[0]):
+                for x in range(warehouse_array.shape[1]):
+                    if warehouse_array[y, x] == 1:
+                        color = BLACK  # Storage location
+                    elif warehouse_array[y, x] == 9:  # Depot location
+                        color = GREEN
+                    else:  # Vse ostalo
+                        color = WHITE
+                    pygame.draw.rect(screen, color, (x * CELL_SIZE, y * CELL_SIZE, CELL_SIZE, CELL_SIZE))
+                    pygame.draw.rect(screen, (200, 200, 200), (x * CELL_SIZE, y * CELL_SIZE, CELL_SIZE, CELL_SIZE), 1)
+
+            pygame.display.flip()
+
+        pygame.quit()
+        return None
+
+
+
+    def create_empty_warehouse(self):
+        """
+        Method is used for creating an empty warehouse with desired parameters (see *)
+        Method will create an empty warehouse (.txt file and image) in warehouse_name/warehouse_name_empty directory.
+        The .txt file which includes the empty warehouse layout will be used as a blueprint when setting desired pick-up
+        locations.
+
+        Method will also create an empty folder called scenarios in which different pickup scenarios will be created,
+        by the create_pickup_scenario method.
+
+        ----------
+        Parameters:
+        ----------
+            self: CreateWarehouse
+
+        warehouse_name: str
+            Name of the warehouse, will create a subdirectory with the given name, it will include the blueprint
+            of the empty warehouse in matrix form which will be used for setting desired pick-up locations.
+
+        -------
+        Returns: None
+        -------
+        """
+
+        root = tk.Tk()
+        root.title("Empty Warehouse Creator")
+
+        #---------------------------------------Labels and Entry fields------------------------------------------------#
+
+        # Number of blocks:
+        tk.Label(root, text="Number of Blocks:").grid(row=0, column=0, padx=5, pady=5)
+        blocks_entry = tk.Entry(root)
+        blocks_entry.grid(row=0, column=1, padx=5, pady=5)
+
+        # Number of aisles:
+        tk.Label(root, text="Number of Aisles:").grid(row=1, column=0, padx=5, pady=5)
+        aisles_entry = tk.Entry(root)
+        aisles_entry.grid(row=1, column=1, padx=5, pady=5)
+
+        # Locations per aisle
+        tk.Label(root, text="Locations per Aisle:").grid(row=2, column=0, padx=5, pady=5)
+        loc_aisles_entry = tk.Entry(root)
+        loc_aisles_entry.grid(row=2, column=1, padx=5, pady=5)
+
+        #----------------------------------------Button to plot warehouse----------------------------------------------#
+
+        def on_plot():
+            try:
+                num_of_blocks = int(blocks_entry.get())
+                num_of_aisles = int(aisles_entry.get())
+                num_of_loc_aisles = int(loc_aisles_entry.get())
+                if num_of_blocks <= 0 or num_of_aisles <= 0 or num_of_loc_aisles <= 0:
+                    raise ValueError("All inputs must be positive integers.")
+                warehouse_array = self.create_warehouse_array(num_of_blocks, num_of_aisles, num_of_loc_aisles)
+                self.draw_empty_warehouse(warehouse_array,root) # This has to be modified for only empty warehouse
+            except ValueError as e:
+                messagebox.showerror("Invalid Input", str(e) if str(e) else "Please enter valid integers.")
+
+        #----------------------------------------Button to reset warehouse---------------------------------------------#
+        def on_reset():  # Button to reset warehouse
+            blocks_entry.delete(0, tk.END)
+            aisles_entry.delete(0, tk.END)
+            loc_aisles_entry.delete(0, tk.END)
+
+        tk.Button(root, text="Plot Warehouse", command=on_plot).grid(row=3, column=0, columnspan=2, pady=10)
+        tk.Button(root, text="Reset Warehouse", command=on_reset).grid(row=4, column=0, columnspan=2, pady=10)
+        tk.Label(root, text="1. Select warehouse plotting parameters.\n "
+                        "2. Add locations in warehouse, click on the black boxes.\n"
+                        "3. Confirm selection press the SPACE key",font=("Default",10)).grid(row=5, column=0,
+                                                                                             columnspan=2, pady=10)
+
+        root.mainloop()
+
+        return None
+
+
 
     def create_warehouse(self,created_directory):
         """
@@ -451,4 +629,132 @@ class CreateWarehouse:
                         "3. Confirm selection press the SPACE key",font=("Default",10)).grid(row=5, column=0, columnspan=2, pady=10)
 
         root.mainloop()
+
+    def create_pickup_scenario(self,pickup_scenario,root=None):
+        """
+        Method is used for creating pick-up scenarios on a warehouse configuration.
+        It will use the warehouse_name_empty.txt and change it to match the desired pick-up scenario.
+        The pickup scenario will be saved in parent_directory/warehouse_name/name_of_pickup_scenario.
+
+        -----------
+        Parameters:
+        -----------
+
+        self: CreateWarehouse
+
+        pickup_scenario: str
+            Name of pick-up scenario.
+
+        --------
+        Returns: None
+        --------
+
+        """
+
+        full_path_save = os.path.join(self.parent_directory,self.warehouse_name,"scenarios",pickup_scenario)
+        full_path_import = os.path.join(self.parent_directory,self.warehouse_name,
+                                        f"{self.warehouse_name}_empty",f"{self.warehouse_name}_empty.txt")
+
+
+        warehouse_array = np.loadtxt(full_path_import, dtype=int) # Load empty warehouse
+
+        pygame.init()
+
+        max_width = 1200
+        max_height = 790
+        rows, cols = warehouse_array.shape
+        CELL_SIZE = min(max_width // cols, max_height // rows)
+        width = warehouse_array.shape[1] * CELL_SIZE
+        height = warehouse_array.shape[0] * CELL_SIZE
+        screen = pygame.display.set_mode((width, height))
+        pygame.display.set_caption(f"Warehouse: {self.warehouse_name} ")
+
+        # Colors
+        WHITE = (255, 255, 255)  # Empty space and paths
+        BLACK = (0, 0, 0)  # Storage locations (1)
+        RED = (255, 0, 0)  # Terminal locations/ pickups (2)
+        GREEN = (0, 255, 0)  # Start/End location (9)
+
+        locations = []
+
+        running = True
+        while running:
+
+            # Block for quiting
+            for event in pygame.event.get():
+                if event.type == pygame.QUIT:
+                    running = False
+
+                # Block for selecting/deselecting pick-up locations
+                elif event.type == pygame.MOUSEBUTTONDOWN:
+                    x, y = pygame.mouse.get_pos()
+                    grid_x = x // CELL_SIZE
+                    grid_y = y // CELL_SIZE
+
+                    # If storage empty set, to full
+                    if warehouse_array[grid_y, grid_x] == 1:
+                        warehouse_array[grid_y, grid_x] = 2
+                        locations.append([grid_y, grid_x])
+                    # If storage full set, to empty
+                    elif warehouse_array[grid_y, grid_x] == 2:
+                        warehouse_array[grid_y, grid_x] = 1
+                        try:
+                            locations.remove([grid_y, grid_x])
+                        except ValueError:
+                            pass
+
+                # Block for saving
+                elif event.type == pygame.KEYDOWN:
+                    if event.key == pygame.K_SPACE:
+                        warehouse_array = self.add_locations_to_warehouse(warehouse_array, locations)
+
+                        if self.save_to_text:
+                            try: # Try to create directory for pick-up scenario
+                                os.makedirs(full_path_save, exist_ok=False)
+                                print(f"Successfully created pick up scenario directory: {full_path_save}")
+                            except Exception as e:
+                                print(f"Failed to create directory. Error: {e}")
+
+                            try: # Try to save pick-up scenario in array format
+                                warehouse_array = np.where(np.isinf(warehouse_array), -1, warehouse_array).astype(int)
+                                np.savetxt(os.path.join(full_path_save,f"{pickup_scenario}.txt"),warehouse_array,
+                                           fmt="%d", delimiter=" ")
+                                print(f"Successfully saved pick up scenario in array format!")
+                            except Exception as e:
+                                print(f"Failed to save warehouse in array format. Error: {e}")
+
+                            try: # Try to save png image of pick-up scenario
+                                pygame.image.save(screen, os.path.join(full_path_save,f"{pickup_scenario}.png"))
+                                print(f"Successfully saved picked up scenario in png format!")
+                            except Exception as e:
+                                print(f"Failed to save warehouse in png format. Error: {e}")
+                        running = False
+
+                        if root is not None:
+                            root.destroy()
+
+            screen.fill(WHITE)  # Default background
+            for y in range(warehouse_array.shape[0]):
+                for x in range(warehouse_array.shape[1]):
+                    if warehouse_array[y, x] == 1:
+                        color = BLACK  # Storage location
+                    elif warehouse_array[y, x] == 2:  # Terminal location
+                        color = RED
+                    elif warehouse_array[y, x] == 9:  # Depot location
+                        color = GREEN
+                    else:  # Vse ostalo
+                        color = WHITE
+                    pygame.draw.rect(screen, color, (x * CELL_SIZE, y * CELL_SIZE, CELL_SIZE, CELL_SIZE))
+                    pygame.draw.rect(screen, (200, 200, 200), (x * CELL_SIZE, y * CELL_SIZE, CELL_SIZE, CELL_SIZE), 1)
+
+            pygame.display.flip()
+
+        pygame.quit()
+        return None
+
+
+
+
+
+
 

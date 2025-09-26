@@ -91,3 +91,5 @@ Thumbs.db
 # --- Project-specific ---
 create_warehouse/system_tests/
 create_warehouse/system_tests.py
+system_tests/
+create_warehouse/__pycache/

@@ -1,13 +1,10 @@
 import os.path
-
 import numpy as np
 import random
 from collections import deque
 import random
 import math
 
-from Komisioniranje.hamming_comparison import new_population
-from Komisioniranje.main import fitness, best_solution
 
 """
 This is a Genetic Algorithm based framework for warehouse navigation,
@@ -169,13 +166,11 @@ class FindPath:
         self.average_fitness_gen = []   # For monitoring, can be deleted
         self.std_dev_fitness_gen = []   # For monitoring, can be deleted
 
-        self.average_hamming_distance_gen = [] # For monitoring, can be deleted
+        self.average_hamming_distance_gen = []
 
         self.progress_gen = 0
         self.generation_counter = 0
         self.convergence_counter = 0
-
-        self.population = []
 
 
     def import_pickup_scenario(self,pickup_scenario):
@@ -319,35 +314,6 @@ class FindPath:
 
         return None
 
-    def hamming_distance_vectorized(self, potential_chromosome, existing_population):
-        """
-        Pairwise calculation of hamming distance of potential_chromosome to every single one in existing population.
-
-        ----------
-        Parameters:
-        ----------
-
-        self: FindPath
-
-        potential_chromosome: np.ndarray Dimension: (len(self.terminals),)
-            Sequence of pickup locations.
-
-        existing_population: np.ndarray Dimension: (N,len(self.terminals))
-            A set of potential solutions.
-
-        --------
-        Returns:
-            np.ndarray
-                An array of pairwise hamming distance with respect to potential_chromosome.
-        --------
-        """
-
-        potential_chromosome = np.array(potential_chromosome)
-        existing_population = np.array(existing_population)
-
-        return np.sum(existing_population != potential_chromosome, axis=1)
-
-
     def initialize_starting_population(self, hamming_attempts = 1000):
         """
         This method is used to initialize a maximally diverse starting population with the help of Hamming distance.
@@ -373,361 +339,17 @@ class FindPath:
             hamming_attempts then we lower the criteria by one and repeat the process.
 
         ----------
-        Returns: None
+        Returns: !!
         ----------
         """
 
+        population = []
         try:
-            self.population.append(list(np.random.permutation(range(1, len(self.terminals))))) # Make the first chromosome
-            for _ in range(self.population_size - 1): # Make the number of chromosomes corresponding to the pop_size
-                optimal_hamming_distance = len(self.terminals)
-
-                while True: # Until we find a potential chromosome
-                    is_found = False
-
-                    for i in range(hamming_attempts):
-                        potential_chromosome = list(np.random.permutation(range(1, len(self.terminals))))
-                        hamming_distances = self.hamming_distance_vectorized(potential_chromosome, self.population)
-                        min_hamming_distance = min(hamming_distances)
-
-                        if min_hamming_distance >= optimal_hamming_distance:
-                            is_found = True
-                            self.population.append(potential_chromosome)
-                            print(f"Number of chromosomes in initial population : {len(self.population)}")
-                            break
-                    if is_found:
-                        break
-                    else:
-                        optimal_hamming_distance = optimal_hamming_distance - 1
-
-            return None
+            population.append(list(np.random.permutation(range(1, number_of_terminals))))
 
         except Exception as e:
             print(f"There has been an error in initializing the starting population. Error: {e}")
             return None
-
-    def compute_fitness(self, chromosome):
-        """
-        Computes the fitness of a single chromosome. Fitness is defined as path length of the chromosome.
-
-        -----------
-        Parameters:
-        -----------
-
-
-        -----------
-        Returns:
-        -----------
-            fitness: int
-                Fitness of the chromosome.
-        """
-
-        total_distance = self.distance_matrix[0][chromosome[0]]
-        for i in range(len(chromosome) - 1):
-            total_distance += self.distance_matrix[chromosome[i]][chromosome[i + 1]]
-        total_distance += self.distance_matrix[chromosome[-1]][0]
-        return total_distance
-
-    def get_dynamic_elitism(self,gen):
-        """
-        Method is used to dynamically adjust the number of chromosomes that are reproduced unchanged into the next
-        generation.
-        It follows a second order polynomial, ensuring lower values at first but rapidly rising when entering
-         final stages of evolution.
-
-        -----------
-        Parameters:
-        -----------
-
-        self: FindPath
-
-        gen: int
-            Number of current generation.
-
-        ---------
-        Returns:
-        ---------
-
-        num_of_elites: int
-            Number of chromosomes that are reproduced unchanged into the next generation.
-
-        """
-
-        progress = gen / self.num_generations
-        num_of_elites = int(self.min_elitism_size + (self.max_elitism_size - self.min_elitism_size)
-                            * math.pow(progress, 2))
-        return num_of_elites
-
-    def get_dynamic_mutation(self,gen):
-        """
-        Method is used to dynamically adjust the mutation rate. Mutation rate is sampled from a uniform
-        distributing U(a,b), where a and b are dynamically adjusted.
-        Favoring a larger mutation rate at early stages and lowering it in the latter stages.
-
-        -----------
-        Parameters:
-        -----------
-
-        self: FindPath
-
-        gen: int
-            Number of current generation.
-
-        ---------
-        Returns:
-        ---------
-
-        mutation_rate: float
-            Mutation rate, a percentage of chance that a chromosome will undergo mutation
-
-        """
-
-        progress = gen / self.num_generations
-        a = self.mutation_rate_min_start + (self.mutation_rate_min_end - self.mutation_rate_min_start) * progress
-        b = self.mutation_rate_max_start + (self.mutation_rate_max_end - self.mutation_rate_max_start) * progress
-
-        return random.uniform(a, b)
-
-    def get_dynamic_tournament(self,gen):
-        """
-        Method is used to dynamically adjust the number of chromosomes that participate in the selection tournament.
-        To enforce selection pressure it raises as the generations are nearing the total number of generations.
-
-        -----------
-        Parameters:
-        -----------
-
-        self: FindPath
-
-        gen: int
-            Number of current generation.
-
-        ---------
-        Returns:
-        ---------
-
-        tournament_size: int
-            number of chromosomes that participate in the selection tournament
-
-        """
-
-        progress = gen / self.num_generations
-        tournament_size = int(self.tournament_size_min +
-                              (self.tournament_size_max - self.tournament_size_min)
-                              * progress)
-
-        return tournament_size
-
-    def tournament_selection(self,tournament_size):
-        """
-        Performs tournament selection. The winner is the chromosome with the lowest fitness.
-
-        -----------
-        Parameters:
-        -----------
-
-        tournament_size: int
-            number of chromosomes that participate in the selection tournament
-
-        -----------
-        Returns:
-        -----------
-
-            best_chromosome: np.ndarray
-                Chromosome with best fitness
-
-        """
-
-        selected = random.sample(list(zip(self.population, fitness)), tournament_size)
-        selected.sort(key=lambda x: x[1])
-        return selected[0][0]
-
-    def ordered_crossover(self,parent_1,parent_2):
-        """
-        Does a standard crossover between parent_1 and parent_2.
-        Selects two random positions from parent_1 array, copies everything in between those two positions
-        and fills the rest with parent_2 genes, skipping duplicates
-
-        -----------
-        Parameters:
-        -----------
-
-        parent_1: np.ndarray
-            A chromosome
-
-        parent_2: np.ndarray
-            A chromosome
-
-        -----------
-        Returns:
-        -----------
-
-        child: np.ndarray
-            A child chromosome made with ordered crossover.
-        """
-
-        size = len(parent_1)
-        start, end = sorted(random.sample(range(size), 2)) # Get two random numbers
-        child = [None] * size # Initialize empty array with fixed size
-        child[start:end + 1] = parent_1[start:end + 1] # Copy from parent_1
-        available = [x for x in parent_2 if x not in child[start:end + 1]] # find missing values in parent_1
-        avail_index = 0
-        for i in range(size):
-            if child[i] is None:
-                child[i] = available[avail_index]
-                avail_index += 1
-        return child
-
-    def single_gene_mutation(self,chromosome):
-
-        """
-        Does a single gene swap.
-
-        -----------
-        Parameters:
-        -----------
-
-        chromosome: np.ndarray
-            A chromosome
-
-
-        -----------
-        Returns:
-        -----------
-
-        mutated: np.ndarray
-            A mutated chromosome.
-        """
-
-        mutated = chromosome.copy()
-        i, j = sorted(random.sample(range(len(chromosome)), 2))
-        mutated[i], mutated[j] = mutated[j], mutated[i]
-        return mutated
-
-    def two_opt_swap_mutation(self,chromosome):
-        """
-        Does a two-opt swap, a frequently used technique for TSP like problems.
-
-        -----------
-        Parameters:
-        -----------
-
-        chromosome: np.ndarray
-            A chromosome
-
-        -----------
-        Returns:
-        -----------
-
-        mutated: np.ndarray
-            A mutated chromosome.
-        """
-
-        i, j = sorted(random.sample(range(len(chromosome)), 2))
-        mutated = chromosome[:i] + list(reversed(chromosome[i:j + 1])) + chromosome[j + 1:]
-        return mutated
-
-
-    def find_path(self):
-        """
-        Method is used to find an optimal path for a specific pick-up scenario.
-
-        """
-
-        self.initialize_starting_population(hamming_attempts=1000) # initializes diverse starting population with HD
-
-        for gen in range(self.num_generations): # Evolutionary loop
-
-            # The following blocks correspond to the evaluation of population and saving better solutions
-
-            # Compute fitness for the population
-            fitness = [self.compute_fitness(chromosome) for chromosome in self.population]
-            # Save to a tuple chromosome and its corresponding fitness
-            combined = list(zip(self.population, map(int, fitness)))
-            # Sort into ascending order, lowest fitness is the first element
-            combined.sort(key=lambda x: x[1])
-            # Save the best fitness of this generation MONITORING
-            self.best_fitness_gen.append(combined[0][1])
-            # Save average fitness of this generation MONITORING
-            self.average_fitness_gen.append(np.mean(fitness))
-            # Save standard deviation fitness of this generation MONITORING
-            self.std_dev_fitness_gen.append(np.std(fitness))
-
-            # If we didn't find a better solution
-            if combined[0][1] >= self.best_fitness:
-                self.convergence_counter += 1
-                if self.convergence_counter >= self.convergence_limit:
-                    break
-
-            # We found a better solution
-            else:
-                self.best_fitness = combined[0][1]
-                self.best_solution = combined[0][0]
-                self.convergence_counter = 0
-
-            # The following blocks correspond the genetic operations that create the next generation
-            new_population = [] # Initialize empty array for the next generation
-
-            # Elitism
-            elite = combined[:self.get_dynamic_elitism(gen)] # Get the top individuals and put them in elite
-            new_population.extend([ind for ind, fit in elite]) # Just copy the chromosomes, no need for fitness
-
-            # Next blocks are used for filling the creating and filling the population with standard genetic operations
-
-            # Mutation parameters
-            mutation_rate = self.get_dynamic_mutation(gen)
-
-            while len(new_population) < self.population_size:
-
-                # Procreation
-                parent_1 = self.tournament_selection(self.get_dynamic_tournament(gen)) # Get the first parent
-
-                # Crossover
-                if random.random() < self.crossover_rate:
-                    # Get second parent, ensure it is different
-                    while True:
-                        parent_2 = self.tournament_selection(self.get_dynamic_tournament(gen))
-                        if not np.array_equal(parent_1, parent_2):
-                            break
-
-                    child_1 = self.ordered_crossover(parent_1,parent_2)
-                    child_2 = self.ordered_crossover(parent_2,parent_1)
-                    new_population.append(child_1)
-                    new_population.append(child_2)
-
-                # Reproduction
-                else:
-                    child = parent_1.copy()
-                    new_population.append(child)
-
-                # Mutation
-                if random.random() < mutation_rate:
-                    chromosome_index = random.randint(0, len(new_population) - 1)
-                    try:
-                        # Single gene mutation
-                        if random.random() <= 0.4:
-                            new_population[chromosome_index] = self.single_gene_mutation(new_population[chromosome_index])
-                        # Two-opt swap
-                        else:
-                            new_population[chromosome_index] = self.two_opt_swap_mutation(new_population[chromosome_index])
-                    except Exception as e:
-                        print(f"Error when mutating chromosome {chromosome_index}")
-
-
-
-
-
-
-
-
-
-
-
-            print(f"#------------------------------Generation : {gen}---------------------------------------------#")
-            print(f"Best Fitness: {combined[0][1]}")
-
-
-
 
 
 

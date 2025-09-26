@@ -1,0 +1,17 @@
+find_path:
+  parent_directory: "C:/Users/ACER/PycharmProjects/Machine_Learning/Komisioniranje/Class_implementation/system_tests"
+  warehouse_name: "warehouse_tests"
+  population_size: 100
+  num_generations: 1000
+  mutation_rate_min_start: 0.1
+  mutation_rate_min_end: 0.01
+  mutation_rate_max_start: 0.3
+  mutation_rate_max_end: 0.05
+  crossover_rate: 0.8
+  tournament_size_min: 2
+  tournament_size_max: 20
+  min_elitism_size: 0.02
+  max_elitism_size: 0.2
+  convergence_limit: 0.1
+  use_exploration: False
+  save_run_info: False

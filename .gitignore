@@ -92,4 +92,5 @@ Thumbs.db
 create_warehouse/system_tests/
 create_warehouse/system_tests.py
 system_tests/
-create_warehouse/__pycache/
+create_warehouse/__pycache__/
+path_finding/__pycache__/

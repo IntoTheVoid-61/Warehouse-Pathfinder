@@ -35,13 +35,14 @@ The subfolder will contain a numerically encoded warehouse following the encodin
 
 
 
-This version still includes create_warehouse method which is not recommended it was used solely for quick testing purposes.
+
 
 
 Author: Ziga Breznikar
 Mail: ziga.breznikar@student.um.si
 Date: 22.09.2025
 
+1. Edit: 27.09.2025
 
 """
 
@@ -225,25 +226,24 @@ class CreateWarehouse:
 
         for loc in locations:
             try:  # try catch for invalid input format
-                if warehouse_array[loc[0]][loc[1]] == 1:
-                    warehouse_array[loc[0]][loc[1]] = 2
+                if warehouse_array[loc[0]][loc[1]] == 2:
                     try:  # Try to put the pickup place on the right
                         if warehouse_array[loc[0]][loc[1] + 1] == 0:
-                            warehouse_array[loc[0]][
-                                loc[1] + 1] = 3
+                            warehouse_array[loc[0]][loc[1] + 1] = 3
                     except Exception as e:
-                        print("Cannot put pick up place at the right!")
+                        #print("Cannot put pick up place at the right!")
                         pass
                     try:  # Try to put the pickup place on the left
                         if warehouse_array[loc[0]][loc[1] - 1] == 0:
                             warehouse_array[loc[0]][loc[1] - 1] = 3
                     except Exception as e:
-                        print("Cannot put pick up place at the left!")
+                        #print("Cannot put pick up place at the left!")
                         pass
                 else:
-                    pass
+                    print("Invalid location, try a different one")
             except Exception as e:
                 print(f"Invalid input format, consult documentation. Error: {e}")
+
 
         return warehouse_array
 
@@ -564,77 +564,6 @@ class CreateWarehouse:
         return None
 
 
-
-    def create_warehouse(self,created_directory):
-        """
-        Method is responsible for providing a GUI from which a warehouse is created, based on the warehouse parameters:
-            - Number of blocks
-            - Number of aisles
-            - Number of location per aisle
-
-        When running the method, user can build a warehouse and select pick-up locations, which AGV will have to visit.
-
-        ----------
-        Parameters:
-        ----------
-            self: CreateWarehouse
-
-            created_directory: str
-                Name of the warehouse directory.
-
-        -------
-        Returns: None
-        -------
-
-        """
-
-        root = tk.Tk()
-        root.title("Warehouse Creator")
-
-        #---------------------------------------Labels and Entry fields------------------------------------------------#
-
-        # Number of blocks:
-        tk.Label(root, text="Number of Blocks:").grid(row=0, column=0, padx=5, pady=5)
-        blocks_entry = tk.Entry(root)
-        blocks_entry.grid(row=0, column=1, padx=5, pady=5)
-
-        # Number of aisles:
-        tk.Label(root, text="Number of Aisles:").grid(row=1, column=0, padx=5, pady=5)
-        aisles_entry = tk.Entry(root)
-        aisles_entry.grid(row=1, column=1, padx=5, pady=5)
-
-        # Locations per aisle
-        tk.Label(root, text="Locations per Aisle:").grid(row=2, column=0, padx=5, pady=5)
-        loc_aisles_entry = tk.Entry(root)
-        loc_aisles_entry.grid(row=2, column=1, padx=5, pady=5)
-
-        #----------------------------------------Button to plot warehouse----------------------------------------------#
-
-        def on_plot():
-            try:
-                num_of_blocks = int(blocks_entry.get())
-                num_of_aisles = int(aisles_entry.get())
-                num_of_loc_aisles = int(loc_aisles_entry.get())
-                if num_of_blocks <= 0 or num_of_aisles <= 0 or num_of_loc_aisles <= 0:
-                    raise ValueError("All inputs must be positive integers.")
-                warehouse_array = self.create_warehouse_array(num_of_blocks, num_of_aisles, num_of_loc_aisles)
-                self.draw_warehouse(warehouse_array,created_directory,root)
-            except ValueError as e:
-                messagebox.showerror("Invalid Input", str(e) if str(e) else "Please enter valid integers.")
-
-        def on_reset():  # Button to reset warehouse
-            blocks_entry.delete(0, tk.END)
-            aisles_entry.delete(0, tk.END)
-            loc_aisles_entry.delete(0, tk.END)
-
-        tk.Button(root, text="Plot Warehouse", command=on_plot).grid(row=3, column=0, columnspan=2, pady=10)
-        tk.Button(root, text="Reset Warehouse", command=on_reset).grid(row=4, column=0, columnspan=2, pady=10)
-        tk.Label(root, text="1. Select warehouse plotting parameters.\n "
-                        "2. Add locations in warehouse, click on the black boxes.\n"
-                        "3. Confirm selection press the SPACE key",font=("Default",10)).grid(row=5, column=0, columnspan=2, pady=10)
-
-        root.mainloop()
-
     def create_pickup_scenario(self,pickup_scenario,root=None):
         """
         Method is used for creating pick-up scenarios on a warehouse configuration.
@@ -700,6 +629,8 @@ class CreateWarehouse:
                     if warehouse_array[grid_y, grid_x] == 1:
                         warehouse_array[grid_y, grid_x] = 2
                         locations.append([grid_y, grid_x])
+
+
                     # If storage full set, to empty
                     elif warehouse_array[grid_y, grid_x] == 2:
                         warehouse_array[grid_y, grid_x] = 1
@@ -711,6 +642,7 @@ class CreateWarehouse:
                 # Block for saving
                 elif event.type == pygame.KEYDOWN:
                     if event.key == pygame.K_SPACE:
+                        print(locations)
                         warehouse_array = self.add_locations_to_warehouse(warehouse_array, locations)
 
                         if self.save_to_text:

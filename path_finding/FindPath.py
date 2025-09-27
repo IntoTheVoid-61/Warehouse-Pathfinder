@@ -1,13 +1,10 @@
-import os.path
-
+import os
 import numpy as np
-import random
 from collections import deque
 import random
 import math
 
-from Komisioniranje.hamming_comparison import new_population
-from Komisioniranje.main import fitness, best_solution
+
 
 """
 This is a Genetic Algorithm based framework for warehouse navigation,
@@ -16,14 +13,20 @@ The warehouse layout is represented as a graph, where pick-up locations serve as
 A distance matrix, compute-ed via Breadth-First Search (BFS) enables efficient route evaluation. 
 To promote diversity in the initial population, a Hamming distance-based vectorized initialization strategy is employed,
 ensuring that the chromosomes are maximally distinct. 
-The GA balances exploration and exploitation by dynamically adjusting the fitness function. 
+The GA balances exploration and exploitation by dynamically adjusting the evolutionary parameters. 
 Early generations emphasize diversity, while later ones focus on solution refinement, 
 improving convergence and avoiding premature stagnation.
 
 GA based solutions perform significantly better when potential solutions (chromosomes) are maximally distinct
 and perform poorly when they are similar or equal. Therefore a Hamming distance is used to ensure diversity in the
-initial population. While there is an option to segment the algorithm into exploration/exploitation it is usually not
-necessary, unless you are willing to sacrifice extra computational time. I would advise just using exploitation.
+initial population. 
+
+This implementation is a modified version of the algorithm presented in <add_doi>.
+It has been optimized for faster computation, which is critical for real-world AGV applications.
+As a result, some features were simplified or removed.
+
+Several YAML configuration files are provided, allowing you to tailor the algorithm to your objectives. 
+    - <add this>    
 
 For information about how to use the class, please consult the example.py
 
@@ -67,6 +70,10 @@ class FindPath:
             An increase of this will correspond to an increase in computational time.
             If you want quick solutions lower it.
             default: 1000
+
+        hamming_attempts: int
+            Number of hamming attempts to create a new distinct chromosome, if it does not satisfy the criteria in
+            hamming_attempts then we lower the criteria by one and repeat the process.
 
         mutation_rate_min_start: float
             A float value representing the initial lower boundary (a) mutation rate of the GA framework.
@@ -134,6 +141,7 @@ class FindPath:
     """
 
     def __init__(self,parent_directory,warehouse_name,population_size=100,num_generations=1000,
+                 hamming_attempts=1000,
                  mutation_rate_min_start=0.1,mutation_rate_min_end=0.01,
                  mutation_rate_max_start=0.3,mutation_rate_max_end=0.05,
                  crossover_rate=0.8,tournament_size_min=2,tournament_size_max=20,
@@ -145,6 +153,7 @@ class FindPath:
         self.warehouse_name = warehouse_name
         self.population_size = population_size
         self.num_generations = num_generations
+        self.hamming_attempts = hamming_attempts
         self.mutation_rate_min_start = mutation_rate_min_start
         self.mutation_rate_min_end = mutation_rate_min_end
         self.mutation_rate_max_start = mutation_rate_max_start
@@ -159,6 +168,7 @@ class FindPath:
         self.convergence_limit = int(num_generations * convergence_limit)
 
         self.warehouse = None
+        self.graph = None
         self.terminals = None
         self.distance_matrix = None
 
@@ -241,7 +251,10 @@ class FindPath:
                                 != float("inf") and self.warehouse[nr][nc] != 2):
                             neighbors.append((nr, nc))
                     graph[(r, c)] = neighbors
-        return graph
+
+        self.graph = graph
+
+        return None
 
     def identify_terminals(self):
         """
@@ -269,7 +282,7 @@ class FindPath:
 
         return None
 
-    def compute_distance_matrix(self,graph):
+    def compute_distance_matrix(self):
 
         """
         This method is used to compute a distance matrix. A distance matrix is a symmetrical matrix with zero values
@@ -305,7 +318,7 @@ class FindPath:
 
             while queue and remaining > 0:
                 r, c = queue.popleft()
-                for nr, nc in graph[(r, c)]:
+                for nr, nc in self.graph[(r, c)]:
                     if dist_grid[nr, nc] == float("inf"):
                         dist_grid[nr, nc] = dist_grid[r, c] + 1
                         queue.append((nr, nc))
@@ -319,7 +332,8 @@ class FindPath:
 
         return None
 
-    def hamming_distance_vectorized(self, potential_chromosome, existing_population):
+    @staticmethod
+    def hamming_distance_vectorized(potential_chromosome, existing_population):
         """
         Pairwise calculation of hamming distance of potential_chromosome to every single one in existing population.
 
@@ -348,7 +362,7 @@ class FindPath:
         return np.sum(existing_population != potential_chromosome, axis=1)
 
 
-    def initialize_starting_population(self, hamming_attempts = 1000):
+    def initialize_starting_population(self):
         """
         This method is used to initialize a maximally diverse starting population with the help of Hamming distance.
         Method creates a potential solution with a random permutation.
@@ -368,10 +382,6 @@ class FindPath:
 
         self: FindPath
 
-        hamming_attempts: int
-            Number of hamming attempts to create a new distinct chromosome, if it does not satisfy the criteria in
-            hamming_attempts then we lower the criteria by one and repeat the process.
-
         ----------
         Returns: None
         ----------
@@ -385,7 +395,7 @@ class FindPath:
                 while True: # Until we find a potential chromosome
                     is_found = False
 
-                    for i in range(hamming_attempts):
+                    for i in range(self.hamming_attempts):
                         potential_chromosome = list(np.random.permutation(range(1, len(self.terminals))))
                         hamming_distances = self.hamming_distance_vectorized(potential_chromosome, self.population)
                         min_hamming_distance = min(hamming_distances)
@@ -518,7 +528,7 @@ class FindPath:
 
         return tournament_size
 
-    def tournament_selection(self,tournament_size):
+    def tournament_selection(self,tournament_size,fitness):
         """
         Performs tournament selection. The winner is the chromosome with the lowest fitness.
 
@@ -542,7 +552,8 @@ class FindPath:
         selected.sort(key=lambda x: x[1])
         return selected[0][0]
 
-    def ordered_crossover(self,parent_1,parent_2):
+    @staticmethod
+    def ordered_crossover(parent_1,parent_2):
         """
         Does a standard crossover between parent_1 and parent_2.
         Selects two random positions from parent_1 array, copies everything in between those two positions
@@ -578,7 +589,8 @@ class FindPath:
                 avail_index += 1
         return child
 
-    def single_gene_mutation(self,chromosome):
+    @staticmethod
+    def single_gene_mutation(chromosome):
 
         """
         Does a single gene swap.
@@ -604,7 +616,8 @@ class FindPath:
         mutated[i], mutated[j] = mutated[j], mutated[i]
         return mutated
 
-    def two_opt_swap_mutation(self,chromosome):
+    @staticmethod
+    def two_opt_swap_mutation(chromosome):
         """
         Does a two-opt swap, a frequently used technique for TSP like problems.
 
@@ -627,14 +640,49 @@ class FindPath:
         mutated = chromosome[:i] + list(reversed(chromosome[i:j + 1])) + chromosome[j + 1:]
         return mutated
 
+    @staticmethod
+    def calc_hamming_distance(chromosome_1, chromosome_2):
+        """
+        Calculates hamming distance of two chromosomes.
+        It is a measure of dissimilarity between two potential solutions.
 
-    def find_path(self):
+        -----------
+        Parameters:
+        -----------
+
+        chromosome_1: np.ndarray
+            A chromosome
+
+        chromosome_2: np.ndarray
+            A chromosome
+
+        ---------
+        Returns:
+        --------
+            hamming_distance: int
+                A measure of dissimilarity between two potential solutions.
+        """
+
+        hamming_distance = 0
+        for i in range(len(chromosome_1)):
+            if chromosome_1[i] != chromosome_2[i]:
+                hamming_distance += 1
+        return hamming_distance
+
+
+    def find_path(self,pickup_scenario):
         """
         Method is used to find an optimal path for a specific pick-up scenario.
 
         """
 
-        self.initialize_starting_population(hamming_attempts=1000) # initializes diverse starting population with HD
+        self.import_pickup_scenario(pickup_scenario)
+        self.create_graph()
+        self.identify_terminals()
+        self.compute_distance_matrix()
+
+
+        self.initialize_starting_population() # initializes diverse starting population with HD
 
         for gen in range(self.num_generations): # Evolutionary loop
 
@@ -677,16 +725,17 @@ class FindPath:
             # Mutation parameters
             mutation_rate = self.get_dynamic_mutation(gen)
 
+            # Until we fill the population
             while len(new_population) < self.population_size:
 
                 # Procreation
-                parent_1 = self.tournament_selection(self.get_dynamic_tournament(gen)) # Get the first parent
+                parent_1 = self.tournament_selection(self.get_dynamic_tournament(gen),fitness) # Get the first parent
 
                 # Crossover
                 if random.random() < self.crossover_rate:
                     # Get second parent, ensure it is different
                     while True:
-                        parent_2 = self.tournament_selection(self.get_dynamic_tournament(gen))
+                        parent_2 = self.tournament_selection(self.get_dynamic_tournament(gen),fitness)
                         if not np.array_equal(parent_1, parent_2):
                             break
 
@@ -713,20 +762,32 @@ class FindPath:
                     except Exception as e:
                         print(f"Error when mutating chromosome {chromosome_index}")
 
+            self.population = new_population # Store the new population
 
+            # Calculate and store average hamming distance of population
 
+            num_of_pairwise_hamm_dist = (self.population_size * (self.population_size - 1)) / 2 # Gaussian sum, always int
+            average_hamm_dist  = 0
+            for i in range(self.population_size):
+                for j in range(i+1,self.population_size):
+                    average_hamm_dist += self.calc_hamming_distance(self.population[i],self.population[j])
 
-
-
-
-
-
+            average_hamm_dist = average_hamm_dist / num_of_pairwise_hamm_dist
+            self.average_hamming_distance_gen.append(average_hamm_dist)
 
 
             print(f"#------------------------------Generation : {gen}---------------------------------------------#")
-            print(f"Best Fitness: {combined[0][1]}")
+            print(f"Best Fitness: {self.best_fitness}")
+            print(f"Average Hamming Distance: {average_hamm_dist:.2f}")
+            print("#----------------------------------------------------------------------------------------------#")
+
+        print(f"#---------------------------------Found optimal path----------------------------------------------#")
+        print(f"Shortest tour length: {self.best_fitness}")
+        print(f"#-------------------------------------------------------------------------------------------------#")
 
 
+
+        return None
 
 
 

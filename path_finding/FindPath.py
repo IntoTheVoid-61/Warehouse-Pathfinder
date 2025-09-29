@@ -3,6 +3,7 @@ import numpy as np
 from collections import deque
 import random
 import math
+import json
 
 
 
@@ -46,97 +47,96 @@ class FindPath:
     This class implements the FindPath algorithm. An instance of this class can operate on any warehouse inside the
     parent_directory.
 
-    ----------
     Parameters:
     ----------
-        self: FindPath
-            A FindPath instance that contains the GA framework used to compute optimal path.
+    self: FindPath
+        A FindPath instance that contains the GA framework used to compute optimal path.
 
-        parent_directory: str
-            Name of the parent directory in which the warehouses are stored.
+    parent_directory: str
+         Name of the parent directory in which the warehouses are stored.
 
-        warehouse_name: str
-            Name of the specific warehouse
+    warehouse_name: str
+        Name of the specific warehouse
 
-        population_size: int
-            Integer value representing the size of the population. In other words this represents the number of
-            potential solutions (chromosomes).
-            An increase of this will correspond to an increase in computational time.
-            If you want quick solutions lower it.
-            default: 100
+    population_size: int
+        Integer value representing the size of the population. In other words this represents the number of
+        potential solutions (chromosomes).
+        An increase of this will correspond to an increase in computational time.
+        If you want quick solutions lower it.
+        default: 100
 
-        num_generations: int
-            Integer value representing the number of total generations to evolve.
-            An increase of this will correspond to an increase in computational time.
-            If you want quick solutions lower it.
-            default: 1000
+    num_generations: int
+        Integer value representing the number of total generations to evolve.
+        An increase of this will correspond to an increase in computational time.
+        If you want quick solutions lower it.
+        default: 1000
 
-        hamming_attempts: int
-            Number of hamming attempts to create a new distinct chromosome, if it does not satisfy the criteria in
-            hamming_attempts then we lower the criteria by one and repeat the process.
+    hamming_attempts: int
+        Number of hamming attempts to create a new distinct chromosome, if it does not satisfy the criteria in
+        hamming_attempts then we lower the criteria by one and repeat the process.
 
-        mutation_rate_min_start: float
-            A float value representing the initial lower boundary (a) mutation rate of the GA framework.
-            Mutation probability is dynamic and stochastic, sampled from a uniform distribution U(a,b).
-            default: 0.1
+    mutation_rate_min_start: float
+        A float value representing the initial lower boundary (a) mutation rate of the GA framework.
+        Mutation probability is dynamic and stochastic, sampled from a uniform distribution U(a,b).
+        default: 0.1
 
-        mutation_rate_min_end: float
-            A float value representing the final lower boundary (a) mutation rate of the GA framework.
-            Mutation probability is dynamic and stochastic, sampled from a uniform distribution U(a,b).
-            default: 0.01
+    mutation_rate_min_end: float
+        A float value representing the final lower boundary (a) mutation rate of the GA framework.
+        Mutation probability is dynamic and stochastic, sampled from a uniform distribution U(a,b).
+        default: 0.01
 
-        mutation_rate_max_start: float
-            A float value representing the initial upper boundary (b) mutation rate of the GA framework.
-            Mutation probability is dynamic and stochastic, sampled from a uniform distribution U(a,b).
-            default: 0.3
+    mutation_rate_max_start: float
+        A float value representing the initial upper boundary (b) mutation rate of the GA framework.
+        Mutation probability is dynamic and stochastic, sampled from a uniform distribution U(a,b).
+        default: 0.3
 
-        mutation_rate_max_end: float
-            A float value representing the final upper boundary (b) mutation rate of the GA framework.
-            Mutation probability is dynamic and stochastic, sampled from a uniform distribution U(a,b).
-            default: 0.05
+    mutation_rate_max_end: float
+        A float value representing the final upper boundary (b) mutation rate of the GA framework.
+        Mutation probability is dynamic and stochastic, sampled from a uniform distribution U(a,b).
+        default: 0.05
 
-        crossover_rate: float
-            A float value representing the crossover rate of the GA framework.
-            Each selected chromosome has a probability of crossover_rate for crossover,
-            and probability of 1-crossover_rate for reproduction.
-            default: 0.8
+    crossover_rate: float
+        A float value representing the crossover rate of the GA framework.
+        Each selected chromosome has a probability of crossover_rate for crossover,
+        and probability of 1-crossover_rate for reproduction.
+        default: 0.8
 
-        tournament_size_min: int
-            An integer value representing the minimum tournament size of the GA framework.
-            Tournament size has linear properties and is proportional to ratio of current generation,
-            to number of total generations.
-            Value need to be adjusted intelligently if changing population size.
-            default: 2
+    tournament_size_min: int
+        An integer value representing the minimum tournament size of the GA framework.
+        Tournament size has linear properties and is proportional to ratio of current generation,
+        to number of total generations.
+        Value need to be adjusted intelligently if changing population size.
+        default: 2
 
-        tournament_size_max: int
-            An integer value representing the maximum tournament size of the GA framework.
-            Tournament size has linear properties and is proportional to ratio of current generation,
-            to number of total generations.
-            Value need to be adjusted intelligently if changing population size.
-            default: 20
+    tournament_size_max: int
+        An integer value representing the maximum tournament size of the GA framework.
+        Tournament size has linear properties and is proportional to ratio of current generation,
+        to number of total generations.
+        Value need to be adjusted intelligently if changing population size.
+        default: 20
 
-        min_elitism_size: float
-            A float value representing the fraction of minimum elitism size of the GA framework.
-            Default: 0.02   =>  Meaning 2% of population_size
+    min_elitism_size: float
+        A float value representing the fraction of minimum elitism size of the GA framework.
+        Default: 0.02   =>  Meaning 2% of population_size
 
-        max_elitism_size: float
-            A float value representing the fraction of maximum elitism size of the GA framework.
-            Default: 0.2   =>  Meaning 20% of population_size
+    max_elitism_size: float
+        A float value representing the fraction of maximum elitism size of the GA framework.
+        Default: 0.2   =>  Meaning 20% of population_size
 
-        convergence_limit: float
-            A float value representing the convergence limit of the GA framework.
-            A 0.1 value means that the algorithm will stop if there are no better solutions found
-            in (0.1 * num_generations) generations.
-            Default: 0.1
+    convergence_limit: float
+        A float value representing the convergence limit of the GA framework.
+        A 0.1 value means that the algorithm will stop if there are no better solutions found
+        in (0.1 * num_generations) generations.
+        Default: 0.1
 
-        use_exploration: bool
-            A boolean value representing whether the GA uses exploration or not.
-            Recommended value is False.
-            Default: False
+    use_exploration: bool
+        A boolean value representing whether the GA uses exploration or not.
+        Recommended value is False.
+        Default: False
 
-        save_run_info: bool
-            A boolean value representing whether to save the run information.
-            default: True
+    save_run_info: bool
+        A boolean value representing whether to save the run information.
+        default: True
 
     """
 
@@ -196,18 +196,17 @@ class FindPath:
             - Creating terminals
             - Creating a distance matrix
 
-        ----------
         Parameters:
         ----------
 
         self: FindPath
 
-        warehouse_directory: str
-            Name of the warehouse with pick-up locations on which the algorithm will be applied.
+        pickup_scenario: str
+            Name of the pick-up scenario with pick-up locations on which the algorithm will be applied.
 
+        Returns:
         ---------
-        Returns: None
-        ---------
+        None
 
         """
         file_path = os.path.join(self.parent_directory,self.warehouse_name,"scenarios",
@@ -227,16 +226,15 @@ class FindPath:
         """
         A helper method that is responsible for creating a graph from warehouse on which a distance matrix is created.
 
-        -----------
         Parameters:
         -----------
 
         self: FindPath
 
-        -----------
+
         Returns:
-        graph: dict[tuple[int, int], list[tuple[int, int]]]
         -----------
+        graph: dict[tuple[int, int], list[tuple[int, int]]]
         """
 
         rows, cols = self.warehouse.shape
@@ -261,15 +259,14 @@ class FindPath:
         This method is used for finding coordinates of terminal nodes.
         Terminal nodes include pick-up locations and start/end point. Therefore, the length of this array is p+1
 
-        -----------
         Parameters:
         -----------
 
         self: FindPath
 
+        Returns:
         -----------
-        Returns: None
-        -----------
+        None
         """
 
         terminal_locations = []
@@ -290,18 +287,14 @@ class FindPath:
         i and j.
         The distance matrix allows for rapid evaluation of the total route length by candidate solutions
 
-        -----------
         Parameters:
         -----------
 
         self: FindPath
 
-        graph: dict[tuple[int, int], list[tuple[int, int]]]
-
-
-         -----------
-         Returns: None
-         -----------
+        Returns:
+        -----------
+         None
         """
 
 
@@ -337,11 +330,8 @@ class FindPath:
         """
         Pairwise calculation of hamming distance of potential_chromosome to every single one in existing population.
 
-        ----------
         Parameters:
         ----------
-
-        self: FindPath
 
         potential_chromosome: np.ndarray Dimension: (len(self.terminals),)
             Sequence of pickup locations.
@@ -349,11 +339,11 @@ class FindPath:
         existing_population: np.ndarray Dimension: (N,len(self.terminals))
             A set of potential solutions.
 
-        --------
+
         Returns:
-            np.ndarray
-                An array of pairwise hamming distance with respect to potential_chromosome.
         --------
+        np.ndarray
+            An array of pairwise hamming distance with respect to potential_chromosome.
         """
 
         potential_chromosome = np.array(potential_chromosome)
@@ -376,15 +366,14 @@ class FindPath:
         Every randomly created chromosomes is compared to existing population and evaluated relatively to how
         different it is to other chromosomes. If it is "different enough" it is placed in the population,
 
-        -----------
         Parameters:
         -----------
 
         self: FindPath
 
+        Returns:
         ----------
-        Returns: None
-        ----------
+        None
         """
 
         try:
@@ -420,16 +409,20 @@ class FindPath:
         """
         Computes the fitness of a single chromosome. Fitness is defined as path length of the chromosome.
 
-        -----------
         Parameters:
         -----------
 
+        self: FindPath
 
-        -----------
+        chromosome:
+            np.ndarray
+
+
+
         Returns:
         -----------
-            fitness: int
-                Fitness of the chromosome.
+        fitness: int
+            Fitness of the chromosome.
         """
 
         total_distance = self.distance_matrix[0][chromosome[0]]
@@ -445,7 +438,6 @@ class FindPath:
         It follows a second order polynomial, ensuring lower values at first but rapidly rising when entering
          final stages of evolution.
 
-        -----------
         Parameters:
         -----------
 
@@ -454,10 +446,8 @@ class FindPath:
         gen: int
             Number of current generation.
 
-        ---------
         Returns:
         ---------
-
         num_of_elites: int
             Number of chromosomes that are reproduced unchanged into the next generation.
 
@@ -474,7 +464,6 @@ class FindPath:
         distributing U(a,b), where a and b are dynamically adjusted.
         Favoring a larger mutation rate at early stages and lowering it in the latter stages.
 
-        -----------
         Parameters:
         -----------
 
@@ -483,10 +472,8 @@ class FindPath:
         gen: int
             Number of current generation.
 
-        ---------
         Returns:
         ---------
-
         mutation_rate: float
             Mutation rate, a percentage of chance that a chromosome will undergo mutation
 
@@ -503,7 +490,6 @@ class FindPath:
         Method is used to dynamically adjust the number of chromosomes that participate in the selection tournament.
         To enforce selection pressure it raises as the generations are nearing the total number of generations.
 
-        -----------
         Parameters:
         -----------
 
@@ -512,10 +498,8 @@ class FindPath:
         gen: int
             Number of current generation.
 
-        ---------
         Returns:
         ---------
-
         tournament_size: int
             number of chromosomes that participate in the selection tournament
 
@@ -532,19 +516,16 @@ class FindPath:
         """
         Performs tournament selection. The winner is the chromosome with the lowest fitness.
 
-        -----------
         Parameters:
         -----------
 
         tournament_size: int
             number of chromosomes that participate in the selection tournament
 
-        -----------
         Returns:
         -----------
-
-            best_chromosome: np.ndarray
-                Chromosome with best fitness
+        best_chromosome: np.ndarray
+            Chromosome with best fitness
 
         """
 
@@ -559,7 +540,6 @@ class FindPath:
         Selects two random positions from parent_1 array, copies everything in between those two positions
         and fills the rest with parent_2 genes, skipping duplicates
 
-        -----------
         Parameters:
         -----------
 
@@ -569,10 +549,8 @@ class FindPath:
         parent_2: np.ndarray
             A chromosome
 
-        -----------
         Returns:
         -----------
-
         child: np.ndarray
             A child chromosome made with ordered crossover.
         """
@@ -595,7 +573,6 @@ class FindPath:
         """
         Does a single gene swap.
 
-        -----------
         Parameters:
         -----------
 
@@ -603,10 +580,8 @@ class FindPath:
             A chromosome
 
 
-        -----------
         Returns:
         -----------
-
         mutated: np.ndarray
             A mutated chromosome.
         """
@@ -621,17 +596,14 @@ class FindPath:
         """
         Does a two-opt swap, a frequently used technique for TSP like problems.
 
-        -----------
         Parameters:
         -----------
 
         chromosome: np.ndarray
             A chromosome
 
-        -----------
         Returns:
         -----------
-
         mutated: np.ndarray
             A mutated chromosome.
         """
@@ -646,7 +618,6 @@ class FindPath:
         Calculates hamming distance of two chromosomes.
         It is a measure of dissimilarity between two potential solutions.
 
-        -----------
         Parameters:
         -----------
 
@@ -656,11 +627,11 @@ class FindPath:
         chromosome_2: np.ndarray
             A chromosome
 
-        ---------
         Returns:
         --------
-            hamming_distance: int
-                A measure of dissimilarity between two potential solutions.
+
+        hamming_distance: int
+            A measure of dissimilarity between two potential solutions.
         """
 
         hamming_distance = 0
@@ -670,10 +641,78 @@ class FindPath:
         return hamming_distance
 
 
+    def bfs_segment(self,start_node,end_node):
+        """
+        Method is used to find the shortest path between two pick-up locations.
+
+        Parameters:
+        -----------
+        self: FindPath
+
+        start_node: int
+            Starting pick-up location
+        end_node: int
+            Ending pick-up location
+
+        Returns:
+        ----------
+        path: np.ndarray
+
+        """
+
+        queue = deque([[start_node]])
+        visited = set()
+        while queue:
+            path = queue.popleft()
+            current = path[-1]
+            if current == end_node:
+                return path
+            for neighbor in self.graph.get(current,[]):
+                if neighbor not in visited:
+                    visited.add(neighbor)
+                    queue.append(path + [neighbor])
+        return []
+
+
+    def draw_path(self, path):
+        warehouse = self.warehouse.tolist()
+        num_step = -1
+        for step in path:
+            if not (warehouse[step[0]][step[1]] == 3 or warehouse[step[0]][step[1]] == 9 or warehouse[step[0]][
+                step[1]] == 0):  # Smo ga ze visital
+                warehouse[step[0]][step[1]] = warehouse[step[0]][step[1]] + "," + str(num_step)
+                num_step -= 1
+            else:  # Prvic visital
+                warehouse[step[0]][step[1]] = str(warehouse[step[0]][step[1]]) + "->" + str(num_step)
+                num_step -= 1
+
+        str_warehouse = [[str(col) for col in row] for row in warehouse]
+        max_string_width = max(len(col) for row in str_warehouse for col in row)
+
+        for row in warehouse:
+            print(" | ".join(f"{str(col):>{max_string_width}}" for col in row))
+        return None
+
+
     def find_path(self,pickup_scenario):
         """
-        Method is used to find an optimal path for a specific pick-up scenario.
+        Method is used to find an optimal path for a specific pick-up scenario. It will provide a json file,
+        if the save_run_info is set to True.
+        With given results:
+            - path_length: of the shortest path found
+            - full path: a list of "steps" that the AGV should take to achieve this path.
+            - best_solution: Sequence of pick-up locations to visit for the shortest path.
 
+        Parameters:
+        -----------
+        self: FindPath
+
+        pickup_scenario: str
+            Name of the pick-up scenario with pick-up locations on which the algorithm will be applied.
+
+        Returns:
+        --------
+        None
         """
 
         self.import_pickup_scenario(pickup_scenario)
@@ -786,6 +825,42 @@ class FindPath:
         print(f"#-------------------------------------------------------------------------------------------------#")
 
 
+
+
+        #Creates a list of steps (x,y) where every (x,y) is the position of the empty block
+        self.best_solution = [0] + list(self.best_solution) + [0] # It begins and ends at the start node
+        full_path = []
+        for i in range(len(self.best_solution) - 1):
+            start_node = self.terminals[self.best_solution[i]]
+            end_node = self.terminals[self.best_solution[i+1]]
+            segment = self.bfs_segment(start_node, end_node)
+
+            if i != 0:
+                segment = segment[1:]
+            full_path.extend(segment)
+
+        # Convert to int
+        self.best_solution = [int(element) for element in self.best_solution]
+
+        # Following block is responsibly for saving the run info in a json format.
+        if self.save_run_info:
+
+            run_data = {
+                "path_length": int(self.best_fitness),
+                "full_path": full_path,
+                "best_solution": self.best_solution,
+            }
+
+            #print(self.draw_path(full_path))
+            json_file = os.path.join(self.parent_directory,self.warehouse_name,"scenarios",
+                                 pickup_scenario,"results")
+            os.makedirs(json_file, exist_ok=False)
+            json_file = os.path.join(json_file,"results.json")
+            try:
+                with open(json_file, "w") as json_file:
+                    json.dump(run_data, json_file, sort_keys=False)
+            except Exception as e:
+                print(f"Error when saving results to {json_file} Error: {e}")
 
         return None
 

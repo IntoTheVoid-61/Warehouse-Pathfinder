@@ -94,3 +94,4 @@ create_warehouse/system_tests.py
 system_tests/
 create_warehouse/__pycache__/
 path_finding/__pycache__/
+example_parent_dir/

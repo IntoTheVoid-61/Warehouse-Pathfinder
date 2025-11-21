@@ -1,0 +1,18 @@
+find_path:
+  parent_directory: "/mnt/c/Users/ACER/PycharmProjects/ML/Genetic_Algorithms/AGV_Routing/Warehouse-Pathfinder/example_parent_dir"
+  warehouse_name: "example_warehouse_1"
+  population_size: 50
+  num_generations: 1000
+  hamming_attempts: 1000
+  mutation_rate_min_start: 0.1
+  mutation_rate_min_end: 0.01
+  mutation_rate_max_start: 0.3
+  mutation_rate_max_end: 0.05
+  crossover_rate: 0.8
+  tournament_size_min: 2
+  tournament_size_max: 20
+  min_elitism_size: 0.02
+  max_elitism_size: 0.2
+  convergence_limit: 0.1
+  use_exploration: False
+  save_run_info: True

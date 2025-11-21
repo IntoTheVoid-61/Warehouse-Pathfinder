@@ -9,7 +9,8 @@ The framework is designed for future integration with ROS2 for AGV navigation si
 
 For specific warehouse configurations and generated layouts, please refer to the examples in the example.py file.
 
-The project is actively developed and updated frequently.
+This is a simplified and optimized version of an algorithm from the paper: https://doi.org/10.14743/apem2025.3.541
+
 
 ## Features
 - Interactive warehouse creation with Pygame GUI

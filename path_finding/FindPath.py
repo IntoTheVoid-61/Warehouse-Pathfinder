@@ -22,12 +22,12 @@ GA based solutions perform significantly better when potential solutions (chromo
 and perform poorly when they are similar or equal. Therefore a Hamming distance is used to ensure diversity in the
 initial population. 
 
-This implementation is a modified version of the algorithm presented in <add_doi>.
+This implementation is a modified version of the algorithm presented in https://doi.org/10.14743/apem2025.3.541.
 It has been optimized for faster computation, which is critical for real-world AGV applications.
 As a result, some features were simplified or removed.
 
-Several YAML configuration files are provided, allowing you to tailor the algorithm to your objectives. 
-    - <add this>    
+Several YAML configuration files are provided in the config folder, allowing you to tailor the algorithm to your objectives. 
+    - fast_solution.yaml 
 
 For information about how to use the class, please consult the example.py
 

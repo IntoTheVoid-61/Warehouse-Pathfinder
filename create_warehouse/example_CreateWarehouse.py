@@ -3,8 +3,6 @@ from CreateWarehouse import CreateWarehouse
 """
 This script serves as example of usage.
 
-
-
 If you want to create a warehouse using the Class: CreateWarehouse you just make an instance
 of the class.
 
@@ -66,7 +64,7 @@ Once the empty warehouse is made you can create multiple pick-up scenarios using
 """
 # Creates an instance, setting the parent directory to: example_parent_dir . This will save all the warehouses created from this instance into mentioned directory.
 # warehouse_name corresponds to specific warehouse configuration
-warehouse_example = CreateWarehouse(parent_directory="example_parent_dir",warehouse_name="example_warehouse_1",save_to_text=True)
+warehouse_example = CreateWarehouse(parent_directory="../example_parent_dir",warehouse_name="example_warehouse_1",save_to_text=True)
 
 # This will open the GUI, which will guide you through warehouse creation of an empty_warehouse, when finished enter SPACE_BAR to save.
 warehouse_example.create_empty_warehouse()
